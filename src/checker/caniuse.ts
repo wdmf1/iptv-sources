@@ -29,7 +29,7 @@ export const canIUseIPTVChecker = async () => {
     } else {
       return false;
     }
-  } catch (err) {
+  } catch {
     return false;
   }
 };

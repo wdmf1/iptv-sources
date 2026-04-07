@@ -6,6 +6,7 @@ import { with_github_raw_url_proxy } from './sources';
 import { m3u2txt } from './utils';
 import type { ISource } from './sources';
 import type { TEPGSource } from './epgs/utils';
+
 import { mergeByDateAndChannel, parseEpgXml, sanitizeChannelFileName } from './epgs/parser';
 
 export const getContent = async (src: ISource | TEPGSource) => {
@@ -98,16 +99,19 @@ export const writeEpgXML = (f_name: string, xml: string) => {
 
   fs.writeFileSync(path.resolve('m3u', 'epg', `${f_name}.xml`), xml);
 };
-
+export function makeEpgDir() {
+  const epgDir = path.resolve('m3u', 'epg');
+  if (!fs.existsSync(epgDir)) {
+    fs.mkdirSync(epgDir, { recursive: true });
+  }
+  return epgDir;
+}
 /**
  * 将单份 XMLTV XML 解析为 TVBox 所需的按日期、频道 JSON 文件
  * 输出路径: m3u/epg/{provider}/{YYYY-MM-DD}/{频道名}.json
  */
 export const writeEpgJsonFromXml = (provider: string, xml: string) => {
-  const epgDir = path.resolve('m3u', 'epg');
-  if (!fs.existsSync(epgDir)) {
-    fs.mkdirSync(epgDir, { recursive: true });
-  }
+  const epgDir = makeEpgDir();
 
   const allItems = parseEpgXml(xml);
   const byDateChannel = mergeByDateAndChannel(allItems);

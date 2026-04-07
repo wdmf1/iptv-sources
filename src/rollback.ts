@@ -30,7 +30,7 @@ export const updateByRollback = async (
 
     console.log(`All failed, give up ${sr.name}!`);
     return undefined;
-  } catch (e) {
+  } catch {
     console.log(`Fetch m3u Rollback from ${rollback_urls[idx]} FAILED, try next...`);
     if (++idx < rollback_urls.length) {
       return updateByRollback(sr, sr_filter, idx);
@@ -65,7 +65,7 @@ export const updateEPGByRollback = async (
 
     console.log(`All failed, give up ${sr.name}!`);
     return undefined;
-  } catch (e) {
+  } catch {
     console.log(`Fetch EPG Rollback from ${rollback_urls[idx]} FAILED, try next...`);
     if (++idx < rollback_urls.length) {
       return updateEPGByRollback(sr, idx);

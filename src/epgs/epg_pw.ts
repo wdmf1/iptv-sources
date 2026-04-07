@@ -11,6 +11,10 @@
 import { XMLBuilder, XMLParser } from 'fast-xml-parser';
 
 import { writeEpgJsonFromXml } from '../file';
+import type { EpgChannelJson } from './parser';
+import { writeFile } from 'fs/promises';
+import path from 'path';
+import { mkdir } from 'fs/promises';
 
 /** 与 src/epgs/parser.ts 保持一致，便于结构一致 */
 const PW_EPG_PARSER_OPTIONS = {
@@ -29,8 +33,8 @@ const epgPwBuilder = new XMLBuilder({
 });
 
 type EpgPwTvNode = {
-  channel?: unknown;
-  programme?: unknown;
+  channel?: EpgPwChannelNode | EpgPwChannelNode[];
+  programme?: EpgPwProgrammeNode | EpgPwProgrammeNode[];
 };
 
 interface EpgPwChannel {
@@ -38,6 +42,52 @@ interface EpgPwChannel {
   name: string;
 }
 
+type EpgPwTextNode =
+  | string
+  | {
+      '#text'?: string;
+      [key: string]: unknown;
+    };
+
+interface EpgPwXmlNodeBase {
+  [key: string]: unknown;
+}
+
+interface EpgPwChannelNode extends EpgPwXmlNodeBase {
+  '@_id'?: string;
+  'display-name'?: EpgPwTextNode | EpgPwTextNode[];
+}
+
+interface EpgPwProgrammeNode extends EpgPwXmlNodeBase {
+  '@_start'?: string;
+  '@_stop'?: string;
+  '@_channel'?: string;
+  title?: EpgPwTextNode | EpgPwTextNode[];
+  desc?: EpgPwTextNode | EpgPwTextNode[];
+}
+
+export interface PWEpgJson {
+  end_date: string;
+  name: string;
+  info_url: string;
+  country: string;
+  description: string | null;
+  error_message: string;
+  provider: string;
+  source_url: string;
+  offset: string;
+  timezone: string;
+  error_code: number;
+  start_date: string;
+  icon: string;
+  epg_list: PWEpgProgrammeItem[];
+}
+
+export interface PWEpgProgrammeItem {
+  desc: string;
+  start_date: string;
+  title: string;
+}
 /**
  * 从 epg.pw 频道列表页 HTML 中提取频道 ID 与名称
  * 链接格式: href="/last/464609.html?lang=zh-hans"
@@ -67,6 +117,27 @@ function formatDate(date: Date): string {
   return `${y}${m}${d}`;
 }
 
+function utcDate(timeStr: string): Date {
+  // 1. 提取各个部分 (通过字符串截取)
+  const year = +timeStr.substring(0, 4);
+  const month = +timeStr.substring(4, 6) - 1; // 月份从 0 开始计数 (0 = 一月)
+  const day = +timeStr.substring(6, 8);
+  const hour = +timeStr.substring(8, 10);
+  const minute = +timeStr.substring(10, 12);
+  const second = +timeStr.substring(12, 14);
+
+  // 2. 使用 Date.UTC 创建 UTC 时间对象
+  // 注：末尾的 +0000 表示这是 UTC 时间
+  const date = new Date(Date.UTC(year, month, day, hour, minute, second));
+  return date;
+}
+
+function formatTime(date: Date): string {
+  const h = String(date.getHours()).padStart(2, '0');
+  const m = String(date.getMinutes()).padStart(2, '0');
+  return `${h}:${m}`;
+}
+
 async function fetchChannelEpg(channelId: string, date: string): Promise<string | null> {
   const url = `https://epg.pw/api/epg.xml?lang=zh-hans&date=${date}&channel_id=${channelId}`;
   try {
@@ -83,7 +154,7 @@ function normalizeTagList<T>(node: unknown): T[] {
   return Array.isArray(node) ? (node as T[]) : [node as T];
 }
 
-function channelIdFromNode(node: Record<string, unknown>): string | null {
+function channelIdFromNode(node: EpgPwChannelNode): string | null {
   const id = node['@_id'];
   if (id === undefined || id === null) return null;
   const s = String(id).trim();
@@ -94,16 +165,16 @@ function channelIdFromNode(node: Record<string, unknown>): string | null {
  * 解析单份 epg.pw API 返回的 XMLTV 片段
  */
 function parsePwEpgXml(xml: string): {
-  channels: Record<string, unknown>[];
-  programmes: Record<string, unknown>[];
+  channels: EpgPwChannelNode[];
+  programmes: EpgPwProgrammeNode[];
 } {
   try {
     const parsed = epgPwParser.parse(xml) as { tv?: EpgPwTvNode };
     const tv = parsed?.tv;
     if (!tv) return { channels: [], programmes: [] };
     return {
-      channels: normalizeTagList<Record<string, unknown>>(tv.channel),
-      programmes: normalizeTagList<Record<string, unknown>>(tv.programme),
+      channels: normalizeTagList<EpgPwChannelNode>(tv.channel),
+      programmes: normalizeTagList<EpgPwProgrammeNode>(tv.programme),
     };
   } catch {
     return { channels: [], programmes: [] };
@@ -118,11 +189,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
  * @param batchSize - 并发请求数，默认 10
  * @param delayMs - 批次间延迟（毫秒），默认 300
  */
-export async function buildEpgPwXml(
-  dates?: string[],
-  batchSize = 10,
-  delayMs = 300
-): Promise<string> {
+export async function buildEpgPwXml(batchSize = 10, delayMs = 300): Promise<string> {
   console.log('[EPG.PW] Fetching channel list from https://epg.pw/areas/cn.html ...');
   const res = await fetch('https://epg.pw/areas/cn.html?lang=zh-hans', {
     signal: AbortSignal.timeout(30000),
@@ -137,13 +204,19 @@ export async function buildEpgPwXml(
     throw new Error('[EPG.PW] No channels found — page may require JavaScript rendering');
   }
 
-  if (!dates || dates.length === 0) {
-    dates = [formatDate(new Date())];
+  const dates: string[] = [];
+  const today = new Date();
+  for (let i = 0; i < 7; i++) {
+    const date = new Date(today);
+    date.setDate(today.getDate() + i);
+    dates.push(formatDate(date));
   }
 
   const seenChannelIds = new Set<string>();
-  const channelNodes: Record<string, unknown>[] = [];
-  const programmeNodes: Record<string, unknown>[] = [];
+  const channelNodes: EpgPwChannelNode[] = [];
+  const programmeNodes: EpgPwProgrammeNode[] = [];
+  // const epgDir = makeEpgDir();
+  const basePath = path.join(__dirname, '../../m3u/epg/pw-7');
 
   for (const date of dates) {
     console.log(`[EPG.PW] Fetching EPG for date ${date} ...`);
@@ -164,7 +237,23 @@ export async function buildEpgPwXml(
             channelNodes.push(ch);
           }
         }
-
+        const currentChannel = chList[0];
+        const currentChannelName = (currentChannel['display-name'] as string)?.trim().toLowerCase();
+        const json: EpgChannelJson = {
+          channel: currentChannelName,
+          epg_data: progList.map((prog) => ({
+            start: formatTime(
+              utcDate((prog['@_start'] as { '#text'?: string })['#text'] as string)
+            ),
+            end: formatTime(utcDate((prog['@_stop'] as { '#text'?: string })['#text'] as string)),
+            title: prog.title as string,
+          })),
+        };
+        const savePath = await mkdir(path.join(basePath, currentChannelName), { recursive: true });
+        await writeFile(
+          path.join(savePath as string, `${date}.json`),
+          JSON.stringify(json, null, 2)
+        );
         programmeNodes.push(...progList);
       }
 

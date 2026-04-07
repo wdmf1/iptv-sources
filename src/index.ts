@@ -17,7 +17,7 @@ import { sources } from './sources';
 import { updateByRollback, updateEPGByRollback } from './rollback';
 import { epgs_sources } from './epgs';
 import { buildEpgPwXml } from './epgs/epg_pw';
-import { writeTvBoxJson } from './tvbox';
+import { writeTvBoxJson as writeTvBoxLiveJson } from './tvbox';
 import { Collector } from './utils';
 import { runCustomTask } from './task/custom';
 
@@ -49,7 +49,7 @@ cleanFiles();
             writeM3u(sr.f_name, m3u);
             writeM3uToTxt(sr.name, sr.f_name, m3u);
             writeSources(sr.name, sr.f_name, sourcesCollector.result());
-            writeTvBoxJson(sr.f_name, [{ name: sr.name, f_name: sr.f_name }], sr.name);
+            writeTvBoxLiveJson(sr.f_name, [{ name: sr.name, f_name: sr.f_name }], sr.name);
             updateChannelList(sr.name, sr.f_name, m3u);
             return ['normal', count];
           }
@@ -59,7 +59,7 @@ cleanFiles();
             const [m3u, count] = res;
             writeM3u(sr.f_name, m3u);
             writeM3uToTxt(sr.name, sr.f_name, m3u);
-            writeTvBoxJson(sr.f_name, [{ name: sr.name, f_name: sr.f_name }], sr.name);
+            writeTvBoxLiveJson(sr.f_name, [{ name: sr.name, f_name: sr.f_name }], sr.name);
             updateChannelList(sr.name, sr.f_name, m3u, true);
             return ['rollback', count];
           }
@@ -73,7 +73,7 @@ cleanFiles();
             const [m3u, count] = res;
             writeM3u(sr.f_name, m3u);
             writeM3uToTxt(sr.name, sr.f_name, m3u);
-            writeTvBoxJson(sr.f_name, [{ name: sr.name, f_name: sr.f_name }], sr.name);
+            writeTvBoxLiveJson(sr.f_name, [{ name: sr.name, f_name: sr.f_name }], sr.name);
             updateChannelList(sr.name, sr.f_name, m3u, true);
             return ['rollback', count];
           }
@@ -144,7 +144,7 @@ cleanFiles();
     mergeTxts();
     mergeSources();
     writeEpgJsonByDate();
-    writeTvBoxJson('tvbox', sources, 'Channels');
+    writeTvBoxLiveJson('tvbox', sources, 'Channels');
     updateChannelsJson(sources, sources_res, epgs_sources);
     updateReadme(sources, sources_res, epgs_sources, epgs_res);
 

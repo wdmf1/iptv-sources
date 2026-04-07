@@ -101,7 +101,7 @@ router.get('/api/check', async (ctx) => {
 
     ctx.status = res.status;
     ctx.body = await res.text();
-  } catch (e) {
+  } catch {
     ctx.status = 500;
     return;
   }

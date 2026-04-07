@@ -94,7 +94,7 @@ export const runCustomTask = () => {
 
     r.forEach((rr) => {
       for (let i = 1; i < arr.length; i += 2) {
-        const regExp = /\#EXTINF:-1([^,]*),(.*)/;
+        const regExp = /#EXTINF:-1([^,]*),(.*)/;
 
         const name = regExp.exec(arr[i])![2].trim();
 

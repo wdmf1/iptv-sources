@@ -5,7 +5,7 @@ const ENV = process.env;
 let oldJson;
 try {
   oldJson = JSON.parse(fs.readFileSync('schedule-config.json', 'utf-8'));
-} catch (_error) {
+} catch {
   oldJson = {};
 }
 

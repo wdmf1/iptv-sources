@@ -58,9 +58,14 @@ type ParsedProgramme = Record<string, unknown> & {
 };
 type ChannelId = string;
 type ChannelName = string;
+type ChannelDisplayName =
+  | string
+  | { '#text'?: string }
+  | Array<string | { '#text'?: string }>;
 type ChannelFromXml = {
   '@_id'?: string;
-  'display-name'?: string;
+  name?: string;
+  'display-name'?: ChannelDisplayName;
 };
 type ParsedChannel = Record<ChannelId, ChannelName>;
 
@@ -68,6 +73,20 @@ function toProgrammeList(programme: unknown): ParsedProgramme[] {
   if (!programme) return [];
   if (Array.isArray(programme)) return programme as ParsedProgramme[];
   return [programme as ParsedProgramme];
+}
+
+function pickChannelName(channel: ChannelFromXml): string {
+  const displayName = channel['display-name'];
+  if (typeof displayName === 'string') return displayName.trim();
+  if (Array.isArray(displayName)) {
+    const first = displayName[0];
+    if (typeof first === 'string') return first.trim();
+    return first?.['#text']?.trim() ?? '';
+  }
+  if (displayName && typeof displayName === 'object') {
+    return displayName['#text']?.trim() ?? '';
+  }
+  return channel.name?.trim() ?? '';
 }
 
 function toChannelList(channel: unknown): ParsedChannel {
@@ -80,8 +99,7 @@ function toChannelList(channel: unknown): ParsedChannel {
 
   for (const c of channels) {
     const id = c['@_id'] ?? '';
-    const name = c['display-name'] as { '#text'?: string };
-    parsedChannels[id] = name?.['#text'] ?? '';
+    parsedChannels[id] = pickChannelName(c);
   }
   return parsedChannels;
 }

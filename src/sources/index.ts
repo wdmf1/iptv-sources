@@ -22,7 +22,7 @@ import {
   // joevess_iptv_sources,
   // cymz6_lives_sources,
   youhun_sources,
-  zbds_sources,
+  // zbds_sources,
   hotel_tvn_sources,
 } from '.';
 
@@ -37,6 +37,6 @@ export const sources = [
   ...epg_pw_sources,
   // ...qwerttvv_bj_iptv_sources,
   ...youhun_sources,
-  ...zbds_sources,
+  // ...zbds_sources,
   ...hotel_tvn_sources,
 ];

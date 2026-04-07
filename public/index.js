@@ -191,7 +191,13 @@ class PathParser {
       });
     return true;
   }
+  function replaceDomain(domain) {
+    document.querySelectorAll('code').forEach(code => {
+      code.textContent = code.textContent.replace('{site_url}', 'https://' + domain);
+    });
+  }
   const urlOjb = PathParser.parse();
+  replaceDomain(window.location.hostname);
   loadMarkdown(urlOjb);   
 
   document.addEventListener('click', (event) => {

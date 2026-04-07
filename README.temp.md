@@ -10,7 +10,6 @@
 |------|------|
 | [epg.pw](https://epg.pw/test_channel_page.html) | 全球频道 |
 | [youhun](https://github.com/HerbertHe/youhun) | 国内频道 |
-| [zbds](https://github.com/youhunwl/TVAPP) | 国内频道 |
 | [hotel_tvn](https://github.com/HerbertHe/hotel_tvn) | 酒店源 |
 
 ## EPG 数据源

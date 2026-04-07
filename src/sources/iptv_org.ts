@@ -4,7 +4,7 @@ import type { ISource, TSources } from './utils';
 
 export const iptv_org_filter: ISource['filter'] = (raw, caller, collectFn): [string, number] => {
   const rawArray = handle_m3u(raw);
-  const invalidExp = /\#EXTVLCOPT:/;
+  const invalidExp = /#EXTVLCOPT:/;
 
   const arr = rawArray.filter((r) => !invalidExp.test(r));
 
@@ -26,9 +26,9 @@ export const iptv_org_filter: ISource['filter'] = (raw, caller, collectFn): [str
       sourced.push(id);
       result.push(
         arr[i]
-          .replace(/\@\@[0-9]*/g, '')
-          .replace(/\[geo\-blocked\]/, '')
-          .replace(/\[Geo\-blocked\]/, '')
+          .replace(/@@[0-9]*/g, '')
+          .replace(/\[geo-blocked\]/, '')
+          .replace(/\[Geo-blocked\]/, '')
           .trim()
       );
       result.push(arr[i + 1]);

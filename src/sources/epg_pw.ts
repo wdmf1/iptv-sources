@@ -4,7 +4,7 @@ import type { ISource, TSources } from './utils';
 
 export const epg_pw_filter: ISource['filter'] = (raw, caller, collectFn): [string, number] => {
   const rawArray = handle_m3u(raw);
-  const regExp = /\#EXTINF:-1\s+tvg\-name\=\"([^"]+)\"/;
+  const regExp = /#EXTINF:-1\s+tvg-name="([^"]+)"/;
 
   let i = 1;
   const sourced: string[] = [];
@@ -22,9 +22,9 @@ export const epg_pw_filter: ISource['filter'] = (raw, caller, collectFn): [strin
         sourced.push(reg[1]);
         result.push(
           rawArray[i]
-            .replace(/\@\@[0-9]*/g, '')
-            .replace(/\[geo\-blocked\]/, '')
-            .replace(/\[Geo\-blocked\]/, '')
+            .replace(/@@[0-9]*/g, '')
+            .replace(/\[geo-blocked\]/, '')
+            .replace(/\[Geo-blocked\]/, '')
             .trim()
         );
         result.push(rawArray[i + 1]);

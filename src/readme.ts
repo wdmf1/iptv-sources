@@ -24,7 +24,7 @@ export const updateChannelList = (
   const list = fs.readFileSync(list_temp_p, 'utf8').toString();
 
   const m3uArray = handle_m3u(m3u);
-  const channelRegExp = /\#EXTINF:-1([^,]*),(.*)/;
+  const channelRegExp = /#EXTINF:-1([^,]*),(.*)/;
   let i = 1;
   const channels: Array<string>[] = [];
   while (i < m3uArray.length) {
