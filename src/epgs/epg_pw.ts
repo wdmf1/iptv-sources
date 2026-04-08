@@ -76,17 +76,21 @@ function channelIdFromNode(node: XmltvChannelNode): string | null {
 
 /**
  * 解析单份 epg.pw API 返回的 XMLTV 片段
+ * 该接口按 channel_id 请求，响应中只会包含当前频道的 <channel> 与其 <programme> 列表
  */
 export function parsePwEpgXml(xml: string): {
-  channels: XmltvChannelNode[];
+  channel: XmltvChannelNode | null;
   programmes: XmltvProgrammeNode[];
 } {
   const tv = parseXmltvRoot(xml) as XmltvNode | null;
   if (!tv) {
-    return { channels: [], programmes: [] };
+    return { channel: null, programmes: [] };
   }
+
+  const [channel] = normalizeXmlList(tv.channel);
+
   return {
-    channels: normalizeXmlList(tv.channel),
+    channel: channel ?? null,
     programmes: normalizeXmlList(tv.programme),
   };
 }
@@ -162,24 +166,23 @@ export async function buildEpgPwXml(batchSize = 10, delayMs = 300): Promise<stri
       for (const result of results) {
         if (result.status !== 'fulfilled' || !result.value) continue;
 
-        const { channels: chList, programmes: progList } = parsePwEpgXml(result.value);
+        const { channel, programmes } = parsePwEpgXml(result.value);
+        if (!channel) continue;
 
-        for (const ch of chList) {
-          const chId = channelIdFromNode(ch);
-          if (chId && !seenChannelIds.has(chId)) {
-            seenChannelIds.add(chId);
-            channelNodes.push(ch);
-          }
+        const channelId = channelIdFromNode(channel);
+        if (channelId && !seenChannelIds.has(channelId)) {
+          seenChannelIds.add(channelId);
+          channelNodes.push(channel);
         }
-        const currentChannel = chList[0];
-        const json = buildPwChannelJson(currentChannel, progList);
+
+        const json = buildPwChannelJson(channel, programmes);
         const currentChannelName = json.channel;
         const savePath = await mkdir(path.join(basePath, currentChannelName), { recursive: true });
         await writeFile(
           path.join(savePath as string, `${date}.json`),
           JSON.stringify(json, null, 2)
         );
-        programmeNodes.push(...progList);
+        programmeNodes.push(...programmes);
       }
 
       const progress = Math.min(i + batchSize, channels.length);

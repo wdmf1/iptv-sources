@@ -17,7 +17,7 @@ describe('parseChannelListFromHtml', () => {
 });
 
 describe('parsePwEpgXml', () => {
-  it('should parse channel and programme nodes from XMLTV fragment', () => {
+  it('should parse a single channel and its programme nodes from XMLTV fragment', () => {
     const xml = `<?xml version="1.0"?>
 <tv>
   <channel id="100">
@@ -30,15 +30,14 @@ describe('parsePwEpgXml', () => {
 
     const parsed = parsePwEpgXml(xml);
 
-    expect(parsed.channels).toHaveLength(1);
+    expect(parsed.channel?.$?.id).toBe('100');
     expect(parsed.programmes).toHaveLength(1);
-    expect(parsed.channels[0].$?.id).toBe('100');
     expect(parsed.programmes[0].$?.channel).toBe('100');
   });
 
   it('should return empty arrays for malformed xml', () => {
     expect(parsePwEpgXml('<tv><channel id="1"></tv>')).toEqual({
-      channels: [],
+      channel: null,
       programmes: [],
     });
   });
@@ -60,7 +59,7 @@ describe('buildPwChannelJson', () => {
 </tv>`;
 
     const parsed = parsePwEpgXml(xml);
-    const json = buildPwChannelJson(parsed.channels[0], parsed.programmes);
+    const json = buildPwChannelJson(parsed.channel ?? undefined, parsed.programmes);
 
     expect(json).toEqual({
       channel: 'cctv-1 综合',
