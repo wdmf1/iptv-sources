@@ -1,7 +1,7 @@
 import 'dotenv/config';
 
 export const get_custom_url = () =>
-  process.env.CUSTOM_URL ? process.env.CUSTOM_URL : 'https://m3u.ibert.me';
+  process.env.CUSTOM_URL || process.env.CF_PAGES_URL || 'https://m3u.ibert.me';
 
 export const get_github_raw_proxy_url = () => {
   const custom = process.env.CUSTOM_GITHUB_RAW_SOURCE_PROXY_URL;
